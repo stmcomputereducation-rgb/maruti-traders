@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="grad_alaskawhite1svg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8ecef" />
+      <stop offset="50%" stop-color="#e8ecef" />
+      <stop offset="100%" stop-color="#adb5bd" stop-opacity="0.2" />
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Marble Slab Base -->
+  <rect width="800" height="500" fill="url(#grad_alaskawhite1svg)" />
+
+  <!-- Natural Marble Veining Patterns -->
+  <path d="M50,80 Q220,140 420,90 T800,130 L800,136 Q430,96 230,146 T50,86 Z M0,240 Q180,200 380,260 T750,190 L750,196 Q390,266 190,206 T0,246 Z" fill="#adb5bd" opacity="0.6" />
+  <path d="M50,80 Q220,140 420,90 T800,130 L800,136 Q430,96 230,146 T50,86 Z M0,240 Q180,200 380,260 T750,190 L750,196 Q390,266 190,206 T0,246 Z" fill="#343a40" opacity="0.85" filter="url(#shadow)" />
+
+  <!-- Subtle Polish Sheen Overlay -->
+  <rect width="800" height="500" fill="white" opacity="0.04" />
+  <line x1="0" y1="0" x2="800" y2="500" stroke="white" stroke-width="1.5" opacity="0.1" stroke-dasharray="20,40" />
+
+  <!-- Slab Corner Watermark & Info Label -->
+  <rect x="24" y="400" width="752" height="76" rx="12" fill="rgba(255,255,255,0.88)" filter="url(#shadow)" />
+  <text x="44" y="432" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="20" font-weight="bold" fill="#1e293b">
+    Alaska White Exotic Granite
+  </text>
+  <text x="44" y="458" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="13" font-weight="600" fill="#64748b">
+    MARUTI TRADERS • 20mm Flamed & Leather Finish Granite
+  </text>
+</svg>

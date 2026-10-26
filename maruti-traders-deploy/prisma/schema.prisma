@@ -1,0 +1,507 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+model User {
+  id               String        @id @default(cuid())
+  name             String        @default("Admin")
+  email            String        @unique
+  passwordHash     String
+  role             String        @default("ADMIN") // ADMIN only
+  phone            String?
+  isActive         Boolean       @default(true)
+  allowedLocations String        @default("JALOD,DAHOD") // Comma-separated allowed locations
+  godownId         String?
+  godown           Godown?       @relation(fields: [godownId], references: [id])
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  dispatchedTransfers StockTransfer[] @relation("DispatchedBy")
+  receivedTransfers   StockTransfer[] @relation("ReceivedBy")
+  salesInvoices       SalesInvoice[]
+  expensesCreated     Expense[]       @relation("ExpenseCreator")
+  expensesApproved    Expense[]       @relation("ExpenseApprover")
+  auditLogs           AuditLog[]
+}
+
+model CompanyProfile {
+  id                 String   @id @default(cuid())
+  location           String   @unique @default("JALOD") // "JALOD" or "DAHOD"
+  name               String   @default("Maruti Traders")
+  branchTitle        String   @default("Jalod Marble Yard")
+  tagline            String?  @default("Premium Italian Marble, Granite & Natural Stones")
+  address            String   @default("NH 927A, Near Industrial Area, Jalod")
+  city               String   @default("Jalod")
+  state              String   @default("Gujarat")
+  pincode            String   @default("389170")
+  phone              String   @default("+91 98250 11223")
+  alternatePhone     String?  @default("+91 98765 43210")
+  email              String   @default("jalod@marutitraders.com")
+  gstin              String   @default("24AABCM1234P1Z4")
+  pan                String   @default("AABCM1234P")
+  invoicePrefix      String   @default("MT-JAL")
+  bankName           String   @default("State Bank of India")
+  accountNumber      String   @default("394857291039")
+  ifscCode           String   @default("SBIN0004123")
+  branch             String   @default("Commercial Branch")
+  upiId              String   @default("marutitraders@sbi")
+  logoUrl            String?
+  termsAndConditions String   @default("1. Marble is a natural product; variation in shade, veins and texture is natural.\n2. Goods once sold will not be returned or exchanged.\n3. All disputes subject to local jurisdiction.")
+  currencySymbol     String   @default("₹")
+  updatedAt          DateTime @updatedAt
+}
+
+model Godown {
+  id           String          @id @default(cuid())
+  location     String          @default("JALOD") // "JALOD" or "DAHOD"
+  code         String
+  name         String
+  address      String
+  city         String
+  managerName  String?
+  contactPhone String?
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  users              User[]
+  stocks             Stock[]
+  stockMovements     StockMovement[]
+  transfersFrom      StockTransfer[]    @relation("SourceGodown")
+  transfersTo        StockTransfer[]    @relation("DestGodown")
+  salesInvoices      SalesInvoice[]
+  purchaseInvoices   PurchaseInvoice[]
+
+  @@unique([location, code])
+}
+
+model Product {
+  id              String          @id @default(cuid())
+  location        String          @default("JALOD") // "JALOD" or "DAHOD"
+  name            String
+  sku             String
+  barcode         String?
+  category        String          @default("Imported Marble") // Italian Marble, Makrana, Granite, Onyx, Travertine, Quartz, Sandstone
+  subcategory     String?
+  brand           String?         // Quarry / Mine
+  model           String?
+  size            String?         // Slab dimensions e.g. "8 x 5 ft"
+  colour          String?         // White, Beige, Black, Emerald Green, Grey
+  finish          String?         @default("Polished") // Polished, Honed, Leather/Antique, Flamed
+  thickness       String?         @default("18mm") // 16mm, 18mm, 20mm, 30mm
+  slabCount       Float           @default(0) // Total slabs
+  totalSqft       Float           @default(0) // Total area in SQFT
+  unit            String          @default("SQFT") // SQFT, SQMT, SLAB, PCS
+  description     String?
+  photoUrl        String?         // Primary thumbnail
+  photos          String?         // JSON array of photo URLs: ["/uploads/marbles/..."]
+  purchasePrice   Float           @default(0) // Price per sqft/unit
+  sellingPrice    Float           @default(0) // Price per sqft/unit
+  wholesalePrice  Float?
+  gstRate         Float           @default(18) // 0, 5, 12, 18, 28 (Marble is 18%)
+  hsnCode         String?         @default("6802") // 6802 is HSN for worked marble and granite
+  minStockAlert   Float           @default(500) // Minimum SQFT alert
+  openingStock    Float           @default(0)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  stocks          Stock[]
+  stockMovements  StockMovement[]
+  transferItems   StockTransferItem[]
+  invoiceItems    SalesInvoiceItem[]
+  purchaseItems   PurchaseInvoiceItem[]
+
+  @@unique([location, sku])
+}
+
+model Stock {
+  id            String    @id @default(cuid())
+  godownId      String
+  productId     String
+  quantity      Float     @default(0) // Quantity in SQFT or unit
+  slabCount     Float     @default(0) // Slabs in this godown
+  minStockLevel Float     @default(500)
+  updatedAt     DateTime  @updatedAt
+
+  godown        Godown    @relation(fields: [godownId], references: [id], onDelete: Cascade)
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([godownId, productId])
+}
+
+model StockMovement {
+  id            String       @id @default(cuid())
+  productId     String
+  godownId      String
+  type          String       // PURCHASE, SALE, TRANSFER_IN, TRANSFER_OUT, ADJUSTMENT, RETURN_IN, RETURN_OUT
+  quantity      Float        // in SQFT
+  previousStock Float        @default(0)
+  newStock      Float        @default(0)
+  referenceType String?      // "INVOICE", "PURCHASE", "TRANSFER", "ADJUSTMENT"
+  referenceId   String?
+  notes         String?
+  userId        String?
+  createdAt     DateTime     @default(now())
+
+  product       Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  godown        Godown       @relation(fields: [godownId], references: [id], onDelete: Cascade)
+}
+
+model StockTransfer {
+  id                  String              @id @default(cuid())
+  location            String              @default("JALOD")
+  transferNumber      String              @unique // TRF-2026-0001
+  sourceGodownId      String
+  destinationGodownId String
+  status              String              @default("DRAFT") // DRAFT, DISPATCHED, IN_TRANSIT, RECEIVED, CANCELLED
+  notes               String?
+  dispatchedById      String?
+  dispatchedAt        DateTime?
+  receivedById        String?
+  receivedAt          DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  sourceGodown        Godown              @relation("SourceGodown", fields: [sourceGodownId], references: [id])
+  destinationGodown   Godown              @relation("DestGodown", fields: [destinationGodownId], references: [id])
+  dispatchedBy        User?               @relation("DispatchedBy", fields: [dispatchedById], references: [id])
+  receivedBy          User?               @relation("ReceivedBy", fields: [receivedById], references: [id])
+  items               StockTransferItem[]
+}
+
+model StockTransferItem {
+  id                String        @id @default(cuid())
+  transferId        String
+  productId         String
+  quantityRequested Float
+  quantityReceived  Float?
+
+  transfer          StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  product           Product       @relation(fields: [productId], references: [id])
+}
+
+model Customer {
+  id               String         @id @default(cuid())
+  location         String         @default("JALOD") // "JALOD" or "DAHOD"
+  name             String
+  companyName      String?
+  phone            String?
+  alternatePhone   String?
+  email            String?
+  address          String
+  city             String         @default("Jalod")
+  state            String         @default("Rajasthan")
+  pincode          String?
+  gstin            String?
+  pan              String?
+  openingBalance   Float          @default(0) // > 0 means customer owes us (Debit)
+  currentBalance   Float          @default(0)
+  creditLimit      Float          @default(200000)
+  paymentTermsDays Int            @default(30)
+  notes            String?
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  salesInvoices    SalesInvoice[]
+  paymentsReceived Payment[]
+  ledgerEntries    LedgerEntry[]
+
+  @@unique([location, phone])
+}
+
+model Supplier {
+  id               String            @id @default(cuid())
+  location         String            @default("JALOD") // "JALOD" or "DAHOD"
+  name             String
+  companyName      String?
+  phone            String?
+  email            String?
+  address          String
+  city             String            @default("Kishangarh")
+  state            String            @default("Rajasthan")
+  pincode          String?
+  gstin            String?
+  pan              String?
+  openingBalance   Float             @default(0) // > 0 means we owe supplier (Credit)
+  currentBalance   Float             @default(0)
+  paymentTermsDays Int               @default(30)
+  bankDetails      String?
+  notes            String?
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  purchaseInvoices PurchaseInvoice[]
+  paymentsMade     Payment[]
+  ledgerEntries    LedgerEntry[]
+
+  @@unique([location, phone])
+}
+
+model SalesInvoice {
+  id             String             @id @default(cuid())
+  location       String             @default("JALOD") // "JALOD" or "DAHOD"
+  invoiceNumber  String             @unique // MT-JAL-2026-0001
+  invoiceDate    DateTime           @default(now())
+  dueDate        DateTime?
+  customerId     String
+  godownId       String
+  salespersonId  String?
+  invoiceType    String             @default("TAX_INVOICE")
+  status         String             @default("FINALIZED") // FINALIZED, CANCELLED, RETURNED
+  subTotal       Float              @default(0)
+  discountAmount Float              @default(0)
+  discountPercent Float             @default(0)
+  taxableAmount  Float              @default(0)
+  cgstAmount     Float              @default(0)
+  sgstAmount     Float              @default(0)
+  igstAmount     Float              @default(0)
+  totalTax       Float              @default(0)
+  roundOff       Float              @default(0)
+  grandTotal     Float              @default(0)
+  paidAmount     Float              @default(0)
+  balanceDue     Float              @default(0)
+  paymentStatus  String             @default("UNPAID") // PAID, PARTIALLY_PAID, UNPAID
+  paymentMode    String             @default("CASH")
+  pdfUrl         String?
+  notes          String?
+  terms          String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  customer       Customer           @relation(fields: [customerId], references: [id])
+  godown         Godown             @relation(fields: [godownId], references: [id])
+  salesperson    User?              @relation(fields: [salespersonId], references: [id])
+  items          SalesInvoiceItem[]
+  payments       Payment[]
+}
+
+model SalesInvoiceItem {
+  id             String       @id @default(cuid())
+  invoiceId      String
+  productId      String
+  description    String?
+  hsnCode        String?      @default("6802")
+  slabDetails    String?      // e.g. "12 Slabs, 8x5 ft"
+  quantity       Float        // in SQFT
+  unit           String       @default("SQFT")
+  unitPrice      Float        // Rate per SQFT
+  discountAmount Float        @default(0)
+  gstRate        Float        @default(18)
+  taxableAmount  Float
+  cgstAmount     Float        @default(0)
+  sgstAmount     Float        @default(0)
+  igstAmount     Float        @default(0)
+  totalAmount    Float
+
+  invoice        SalesInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product        Product      @relation(fields: [productId], references: [id])
+}
+
+model PurchaseInvoice {
+  id             String                @id @default(cuid())
+  location       String                @default("JALOD")
+  purchaseNumber String                @unique // PUR-JAL-2026-0001
+  billNumber     String?               // Quarry invoice #
+  billDate       DateTime              @default(now())
+  receivedDate   DateTime?             @default(now())
+  supplierId     String
+  godownId       String
+  status         String                @default("RECEIVED")
+  subTotal       Float                 @default(0)
+  discountAmount Float                 @default(0)
+  taxableAmount  Float                 @default(0)
+  cgstAmount     Float                 @default(0)
+  sgstAmount     Float                 @default(0)
+  igstAmount     Float                 @default(0)
+  totalTax       Float                 @default(0)
+  grandTotal     Float                 @default(0)
+  paidAmount     Float                 @default(0)
+  balanceDue     Float                 @default(0)
+  paymentStatus  String                @default("UNPAID")
+  paymentMode    String                @default("BANK_TRANSFER")
+  notes          String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  supplier       Supplier              @relation(fields: [supplierId], references: [id])
+  godown         Godown                @relation(fields: [godownId], references: [id])
+  items          PurchaseInvoiceItem[]
+  payments       Payment[]
+}
+
+model PurchaseInvoiceItem {
+  id             String          @id @default(cuid())
+  purchaseId     String
+  productId      String
+  slabDetails    String?
+  quantity       Float           // in SQFT
+  unitPrice      Float           // Rate per SQFT
+  discountAmount Float           @default(0)
+  gstRate        Float           @default(18)
+  taxableAmount  Float
+  totalAmount    Float
+
+  purchase       PurchaseInvoice @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product        Product         @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id                String           @id @default(cuid())
+  location          String           @default("JALOD")
+  paymentNumber     String           @unique
+  type              String           // "RECEIPT" (Customer) or "PAYMENT" (Supplier)
+  customerId        String?
+  supplierId        String?
+  salesInvoiceId    String?
+  purchaseInvoiceId String?
+  amount            Float
+  paymentDate       DateTime         @default(now())
+  paymentMode       String           @default("CASH")
+  referenceNumber   String?
+  notes             String?
+  createdById       String?
+  createdAt         DateTime         @default(now())
+
+  customer          Customer?        @relation(fields: [customerId], references: [id])
+  supplier          Supplier?        @relation(fields: [supplierId], references: [id])
+  salesInvoice      SalesInvoice?    @relation(fields: [salesInvoiceId], references: [id])
+  purchaseInvoice   PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id])
+}
+
+model LedgerEntry {
+  id              String      @id @default(cuid())
+  location        String      @default("JALOD")
+  entityType      String      // "CUSTOMER" or "SUPPLIER"
+  customerId      String?
+  supplierId      String?
+  entryDate       DateTime    @default(now())
+  transactionType String      // "SALE", "PURCHASE", "PAYMENT_RECEIVED", "PAYMENT_PAID", "OPENING_BALANCE", "ADJUSTMENT"
+  debit           Float       @default(0) // Dr (Naame)
+  credit          Float       @default(0) // Cr (Jama)
+  balance         Float       @default(0) // Running balance
+  referenceType   String?
+  referenceId     String?
+  referenceNumber String?
+  notes           String?
+  createdById     String?
+  createdAt       DateTime    @default(now())
+
+  customer        Customer?   @relation(fields: [customerId], references: [id])
+  supplier        Supplier?   @relation(fields: [supplierId], references: [id])
+}
+
+model Expense {
+  id              String      @id @default(cuid())
+  location        String      @default("JALOD")
+  expenseNumber   String      @unique
+  category        String      // "CRANE_UNLOADING", "TRANSPORT", "ELECTRICITY", "TEA_SNACKS", "POLISHING_CONSUMABLES", "OFFICE_RENT", "MISC"
+  amount          Float
+  expenseDate     DateTime    @default(now())
+  paymentMode     String      @default("CASH")
+  referenceNumber String?
+  description     String
+  vendorName      String?
+  receiptUrl      String?
+  approvedById    String?
+  createdById     String?
+  createdAt       DateTime    @default(now())
+
+  creator         User?       @relation("ExpenseCreator", fields: [createdById], references: [id])
+  approver        User?       @relation("ExpenseApprover", fields: [approvedById], references: [id])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  location   String?  // null or specific location
+  title      String
+  message    String
+  type       String
+  linkUrl    String?
+  isRead     Boolean  @default(false)
+  targetRole String?
+  createdAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model Employee {
+  id           String        @id @default(cuid())
+  employeeCode String        @unique
+  fullName     String
+  phone        String        @unique
+  email        String?
+  address      String?
+  designation  String?
+  role         String        @default("STAFF")
+  godownId     String?
+  salaryType   String        @default("MONTHLY")
+  basicSalary  Float         @default(15000)
+  allowances   Float         @default(0)
+  deductions   Float         @default(0)
+  photoUrl     String?
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  payrolls     Payroll[]
+  attendances  Attendance[]
+}
+
+model Attendance {
+  id         String   @id @default(cuid())
+  employeeId String
+  date       DateTime
+  status     String   @default("PRESENT")
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+}
+
+model Payroll {
+  id                 String     @id @default(cuid())
+  payrollNumber      String     @unique
+  employeeId         String
+  month              Int
+  year               Int
+  workingDays        Int        @default(30)
+  presentDays        Float      @default(30)
+  basicAmount        Float
+  allowancesAmount   Float      @default(0)
+  deductionsAmount   Float      @default(0)
+  advanceDeduction   Float      @default(0)
+  bonusAmount        Float      @default(0)
+  netSalary          Float
+  status             String     @default("PENDING")
+  paymentDate        DateTime?
+  paymentMode        String     @default("BANK_TRANSFER")
+  transactionRef     String?
+  notes              String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  employee           Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
+

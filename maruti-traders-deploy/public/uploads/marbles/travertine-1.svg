@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="grad_travertine1svg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ded0bc" />
+      <stop offset="50%" stop-color="#ded0bc" />
+      <stop offset="100%" stop-color="#bfae97" stop-opacity="0.2" />
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Marble Slab Base -->
+  <rect width="800" height="500" fill="url(#grad_travertine1svg)" />
+
+  <!-- Natural Marble Veining Patterns -->
+  <path d="M0,60 L800,60 L800,64 L0,64 Z M0,120 L800,120 L800,125 L0,125 Z M0,180 L800,180 L800,183 L0,183 Z M0,240 L800,240 L800,246 L0,246 Z M0,300 L800,300 L800,304 L0,304 Z" fill="#bfae97" opacity="0.6" />
+  <path d="M0,60 L800,60 L800,64 L0,64 Z M0,120 L800,120 L800,125 L0,125 Z M0,180 L800,180 L800,183 L0,183 Z M0,240 L800,240 L800,246 L0,246 Z M0,300 L800,300 L800,304 L0,304 Z" fill="#a38f75" opacity="0.85" filter="url(#shadow)" />
+
+  <!-- Subtle Polish Sheen Overlay -->
+  <rect width="800" height="500" fill="white" opacity="0.04" />
+  <line x1="0" y1="0" x2="800" y2="500" stroke="white" stroke-width="1.5" opacity="0.1" stroke-dasharray="20,40" />
+
+  <!-- Slab Corner Watermark & Info Label -->
+  <rect x="24" y="400" width="752" height="76" rx="12" fill="rgba(255,255,255,0.88)" filter="url(#shadow)" />
+  <text x="44" y="432" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="20" font-weight="bold" fill="#1e293b">
+    Classic Roman Beige Travertine
+  </text>
+  <text x="44" y="458" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="13" font-weight="600" fill="#64748b">
+    MARUTI TRADERS • 20mm Veincut Honed & Filled Travertine
+  </text>
+</svg>
